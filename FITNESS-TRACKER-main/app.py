@@ -106,7 +106,7 @@ st.dataframe(similar_data.sample(min(5, len(similar_data))), use_container_width
 st.divider()
 
 # === Groq AI Integration for Fitness Advice ===
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "your_api_key"
 GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 
 def get_fitness_advice(user_query):
