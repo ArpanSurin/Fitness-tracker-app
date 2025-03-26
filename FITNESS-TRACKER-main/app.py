@@ -3,6 +3,12 @@ import numpy as np
 import pandas as pd
 import time
 import warnings
+import requests
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 
@@ -13,7 +19,7 @@ st.set_page_config(page_title="Personal Fitness Tracker", layout="wide")
 
 # Title and introduction
 st.markdown("<h1 style='text-align: center;'>Personal Fitness Tracker</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center;'>Predict your burned calories based on personal attributes.</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>Predict your burned calories and get AI-powered fitness advice.</p>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -21,11 +27,11 @@ st.divider()
 st.sidebar.header("Enter Your Details")
 
 def user_input_features():
-    age = st.sidebar.number_input("Age", min_value=10, max_value=100, value=30, help="Enter your age in years.")
-    bmi = st.sidebar.number_input("BMI", min_value=15.0, max_value=40.0, value=20.0, format="%.1f", help="Body Mass Index.")
-    duration = st.sidebar.number_input("Duration (min)", min_value=0, max_value=60, value=15, help="Exercise duration in minutes.")
-    heart_rate = st.sidebar.number_input("Heart Rate (bpm)", min_value=50, max_value=180, value=80, help="Beats per minute.")
-    body_temp = st.sidebar.number_input("Body Temperature (°C)", min_value=35.0, max_value=42.0, value=37.0, format="%.1f", help="Body temperature during exercise.")
+    age = st.sidebar.number_input("Age", min_value=10, max_value=100, value=30)
+    bmi = st.sidebar.number_input("BMI", min_value=15.0, max_value=40.0, value=20.0, format="%.1f")
+    duration = st.sidebar.number_input("Duration (min)", min_value=0, max_value=60, value=15)
+    heart_rate = st.sidebar.number_input("Heart Rate (bpm)", min_value=50, max_value=180, value=80)
+    body_temp = st.sidebar.number_input("Body Temperature (°C)", min_value=35.0, max_value=42.0, value=37.0, format="%.1f")
     gender_button = st.sidebar.radio("Gender", ("Male", "Female"))
 
     gender = 1 if gender_button == "Male" else 0
@@ -96,3 +102,57 @@ st.divider()
 # Show similar results
 st.subheader("Similar Results")
 st.dataframe(similar_data.sample(min(5, len(similar_data))), use_container_width=True)
+
+st.divider()
+
+# === Groq AI Integration for Fitness Advice ===
+GROQ_API_KEY = "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"
+GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
+
+def get_fitness_advice(user_query):
+    headers = {
+        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    payload = {
+        "model": "llama-3.3-70b-versatile",  # Choose an appropriate model
+        "messages": [
+            {"role": "system", "content": "You are an expert fitness coach."},
+            {"role": "user", "content": user_query}
+        ],
+        "temperature": 0.7
+    }
+    
+    try:
+        response = requests.post(GROQ_ENDPOINT, json=payload, headers=headers, timeout=10)
+        response.raise_for_status()
+        logger.info(f"API response status code: {response.status_code}")
+        return response.json()["choices"][0]["message"]["content"]
+    except requests.exceptions.HTTPError as http_err:
+        error_message = f"HTTP error occurred: {http_err}"
+        logger.error(error_message)
+        logger.error(f"Status code: {http_err.response.status_code}")
+        logger.error(f"Response text: {http_err.response.text}")
+        return f"Error: Unable to fetch AI response due to HTTP error ({http_err.response.status_code}). Response: {http_err.response.text}"
+    except requests.exceptions.ConnectionError as conn_err:
+        logger.error(f"Connection error occurred: {conn_err}")
+        return "Error: Unable to fetch AI response due to connection error."
+    except requests.exceptions.Timeout as timeout_err:
+        logger.error(f"Timeout error occurred: {timeout_err}")
+        return "Error: Unable to fetch AI response due to timeout error."
+    except Exception as err:
+        logger.error(f"An error occurred: {err}")
+        return "Error: Unable to fetch AI response due to unspecified error."
+
+# User input for AI Fitness Coach
+st.subheader("💡 AI Fitness Coach (Powered by Groq)")
+user_query = st.text_area("Ask AI for fitness advice (e.g., best exercises, diet tips, recovery methods)")
+
+if st.button("Get Advice"):
+    with st.spinner("Fetching AI-powered advice..."):
+        advice = get_fitness_advice(user_query)
+        time.sleep(2)
+    st.write("### AI Advice:")
+    st.write(advice)
+
