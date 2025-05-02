@@ -53,8 +53,10 @@ st.dataframe(df, use_container_width=True)
 st.divider()
 
 # Load and preprocess data
-calories = pd.read_csv("calories.csv")
-exercise = pd.read_csv("exercise.csv")
+import os
+print(os.getcwd())  # Check the current working directory
+calories = pd.read_csv(f"{os.getcwd()}/FITNESS-TRACKER-main/calories.csv")
+exercise = pd.read_csv(f"{os.getcwd()}/FITNESS-TRACKER-main/exercise.csv")
 
 # Merge and clean data
 exercise_df = exercise.merge(calories, on="User_ID").drop(columns="User_ID")
